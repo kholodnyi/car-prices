@@ -1,0 +1,14 @@
+---
+version: "3.8"
+services:
+  downloader:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: downloader
+    restart: unless-stopped
+    command: ['python', 'data/scrapper.py']
+    env_file:
+      - .env
+    volumes:
+      - ./src:/src:rw
