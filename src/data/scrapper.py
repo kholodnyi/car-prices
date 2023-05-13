@@ -28,7 +28,7 @@ class Scrapper:
             provinces_to_parse = [name for name in PROVINCES.keys()]
         else:
             provinces_to_parse = [self.province_to_parse]
-
+        logger.info(f'Parsing {provinces_to_parse}')
         for province in provinces_to_parse:
             cars_parsed = self.scrape_listings(
                 min_price=self.price_range[0],
@@ -43,6 +43,8 @@ class Scrapper:
         current_offset = 0
         cars = 0
 
+        retry = 1
+
         while self.running:
             time.sleep(random.uniform(1, 2.4))
             url = URL_TEMPLATE.format(
@@ -53,7 +55,17 @@ class Scrapper:
                 province_name=province_name,
                 location=location)
 
-            response = requests.get(url, headers=headers)
+            logger.info(f'fetching: {url}')
+            try:
+                response = requests.get(url, headers=headers)
+                retry = 1
+            except Exception as e:
+                if retry > 4:
+                    break
+                time.sleep(retry ** 3 + random.uniform(1, 2))
+                logger.error(f'Failed to fetch page: {e}')
+                retry += 1
+                continue
 
             if response.status_code != 200:
                 logger.error(f'Failed to fetch page: {response.status_code}')
@@ -107,6 +119,28 @@ class Scrapper:
 
     def stop(self):
         self.running = False
+
+    @staticmethod
+    def scrape_one_listing(listing_url: str) -> dict:
+        response = requests.get(listing_url, headers=headers)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        script_tag = soup.find('script', string=lambda t: 'ngVdpModel' in str(t))
+
+        if script_tag is not None:
+            script_text = script_tag.string.strip()
+
+            try:
+                car_data = handle_script_text(script_text)
+                car_data['listing_url'] = listing_url
+                return car_data
+            except Exception as e:
+                logger.error(e)
+                return {'error': e}
+
+        else:
+            logger.error('Could not find script tag with ngVdpModel data.')
+            return {'error': 'Could not find script tag with ngVdpModel data.'}
 
 
 if __name__ == '__main__':

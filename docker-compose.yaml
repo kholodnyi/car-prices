@@ -1,14 +1,40 @@
 ---
 version: "3.8"
 services:
-  downloader:
+  scrapper:
     build:
       context: .
-      dockerfile: ./Dockerfile
-    container_name: downloader
-    restart: unless-stopped
+      dockerfile: ./data.Dockerfile
+    container_name: scrapper
+    restart: on-failure
     command: ['python', 'data/scrapper.py']
     env_file:
       - .env
     volumes:
       - ./src:/src:rw
+  cleaner:
+    build:
+      context: .
+      dockerfile: ./data.Dockerfile
+    container_name: cleaner
+    restart: on-failure
+    command: ['bash']
+    env_file:
+      - .env
+    volumes:
+      - ./src:/src:rw
+  
+  web:
+    build:
+      context: .
+      dockerfile: ./web.Dockerfile
+    container_name: web
+    restart: on-failure
+    command: ['python', 'manage.py', 'runserver', '0.0.0.0:8000']
+    env_file:
+      - .env
+    volumes:
+      - ./src:/src:rw
+    ports:
+      - "8000:8000"
+  

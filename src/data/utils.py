@@ -1,4 +1,7 @@
 import json
+import os
+
+import pandas as pd
 
 _SPECS_KEY_MAPPING = {
     'Kilometres': 'kms',
@@ -16,6 +19,96 @@ _SPECS_TO_INT = {
     'Cylinder',
     'Doors',
 }
+
+# set of popular options (names of CleanCarOption columns)
+OPTIONS_COLUMNS_SET = {
+    'opt_heated_steering_wheel',
+    'opt_auto_on_off_headlamps',
+    'opt_illuminated_visor_mirror',
+    'opt_dual_climate_controls',
+    'opt_satellite_radio',
+    'opt_power_brakes',
+    'opt_anti_theft',
+    'opt_driver_side_airbag',
+    'opt_all_wheel_drive',
+    'opt_memory_seats',
+    'opt_daytime_running_lights',
+    'opt_cd_player',
+    'opt_power_locks',
+    'opt_auxiliary_12v_outlet',
+    'opt_remote_starter',
+    'opt_heated_seats',
+    'opt_rear_defroster',
+    'opt_intermittent_wipers',
+    'opt_power_windows',
+    'opt_privacy_glass',
+    'opt_power_seat',
+    'opt_roll_bar',
+    'opt_steering_wheel_audio_controls',
+    'opt_child_safety_locks',
+    'opt_cruise_control',
+    'opt_sunroof',
+    'opt_telescoping_steering',
+    'opt_power_lift_gates',
+    'opt_bluetooth',
+    'opt_cup_holder',
+    'opt_alloy_wheels',
+    'opt_anti_lock_brakes_abs',
+    'opt_leather_wrap_wheel',
+    'opt_trip_odometer',
+    'opt_reverse_parking_sensors',
+    'opt_air_conditioning',
+    'opt_engine_8cyl',
+    'opt_fog_lights',
+    'opt_auto_dimming_mirrors',
+    'opt_crew_cab',
+    'opt_split_folding_rear_seats',
+    'opt_security_system',
+    'opt_fully_loaded',
+    'opt_front_wheel_drive',
+    'opt_6_speed',
+    'opt_remote_trunk_release',
+    'opt_rear_window_wiper',
+    'opt_lane_departure_warning',
+    'opt_stability_control',
+    'opt_spoiler',
+    'opt_power_steering',
+    'opt_side_impact_airbag',
+    'opt_am_fm_stereo',
+    'opt_mp3_cd_player',
+    'opt_adaptive_cruise_control',
+    'opt_traction_control',
+    'opt_digital_clock',
+    'opt_premium_audio',
+    'opt_tinted_windows',
+    'opt_3rd_row_seating',
+    'opt_remote_start',
+    'opt_heated_mirrors',
+    'opt_wood_trim_interior',
+    'opt_anti_starter',
+    'opt_power_adjustable_seat',
+    'opt_xenon_headlights',
+    'opt_panoramic_sunroof',
+    'opt_leather_interior',
+    'opt_navigation_system',
+    'opt_tilt_steering',
+    'opt_tachometer',
+    'opt_tow_package',
+    'opt_rear_view_camera',
+    'opt_rear_air___heat',
+    'opt_power_mirrors',
+    'opt_rain_sensor_wipers',
+    'opt_keyless_entry',
+    'opt_bucket_seats',
+    'opt_console',
+    'opt_map_lights',
+    'opt_climate_control',
+    'opt_dual_airbag',
+    'opt_trip_computer',
+    'opt_cloth_interior',
+    'opt_passenger_airbag',
+}
+
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
 }
@@ -84,6 +177,18 @@ PROVINCES = {
         'code': 'sk',
     }
 }
+
+ONE_HOT_ENCODE_COLUMNS = [
+    'body_type',
+    'drivetrain',
+    'fuel_type',
+    'make',
+    'model',
+    'transmission',
+    'city',
+    'province',
+    'cylinder_grouped',
+]
 
 
 def convert_str_to_int(string):
@@ -169,3 +274,24 @@ def handle_script_text(script_text: str):
         car_data['carfax_no_accidents'] = 0
 
     return car_data
+
+
+def apply_column_mapping(df: pd.DataFrame):
+    # Load the column mappings from the file that located in the same directory as this script
+    # and named column_mappings.json
+    with open(os.path.join(os.path.dirname(__file__), 'column_mappings.json')) as f:
+        column_mappings = json.load(f)
+
+        # Apply the column mappings to the input DataFrame
+    for column, encoded_columns in column_mappings.items():
+        # Create new columns with the encoded values
+        for encoded_column in encoded_columns:
+            df[encoded_column] = 0
+
+        # Set the value of the corresponding encoded column based on the input data
+        value = df[column].iloc[0]
+        encoded_column = f"{column}_{value}"
+        if encoded_column in df.columns:
+            df.at[0, encoded_column] = 1
+
+    return df

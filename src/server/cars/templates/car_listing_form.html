@@ -1,0 +1,273 @@
+<style>
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* Adjust alignment of items */
+}
+
+.form-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  margin-right: 20px; /* Add margin to create space between columns */
+}
+
+.result-container {
+  width: 40%;
+  padding: 20px;
+  background-color: #f2f2f2;
+  position: sticky;
+  top: 0;
+  right: 0;
+  overflow-y: auto;
+  height: calc(100vh - 40px); /* Adjust height to fit viewport */
+}
+
+h1 {
+  margin: 0 0 20px;
+}
+
+.form-field {
+  margin-bottom: 8px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+select,
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+}
+
+.submit-container {
+  margin-top: 20px;
+  text-align: right;
+}
+
+#submit-button {
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#response-container {
+  margin-top: 20px;
+  font-weight: bold;
+  font-family: Tahoma, sans-serif;
+  font-size: 16px;
+}
+
+#error-message {
+  color: red;
+  font-weight: bold;
+  font-family: Tahoma, sans-serif;
+  font-size: 16px;
+}
+</style>
+<div class="container">
+  <div class="form-container">
+    <h1>Form:</h1>
+    <form id="car-listing-form">
+      <div class="form-field">
+        <label for="car-maker">Car Maker:</label>
+        <select id="car-maker" name="car_maker">
+          <option value="">Select Car Maker</option>
+          {% for car_maker in car_makers %}
+          <option value="{{ car_maker.id }}">{{ car_maker.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="car-model">Car Model:</label>
+        <select id="car-model" name="car_model" disabled>
+          <option value="" id="car-model-id">Select Car Model</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="province">Province:</label>
+        <select id="province" name="province">
+          <option value="">Select Province</option>
+          {% for province in provinces %}
+          <option value="{{ province.id }}">{{ province.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="city">City:</label>
+        <select id="city" name="city" disabled>
+          <option value="" id="city-id">Select City</option>
+        </select>
+      </div>
+
+      <!-- remaining form fields -->
+      {% for field in form %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      </div>
+      {% endfor %}
+
+      {% csrf_token %}
+
+      <div class="submit-container">
+        <button id="submit-button" type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="result-container">
+    <h1>Result:</h1>
+    <div id="response-container"></div>
+    <div id="error-message"></div>
+  </div>
+</div>
+<!-- Add jQuery library -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+<!-- AJAX script to handle dynamic selection -->
+<script>
+  $(document).ready(function() {
+    $('#car-maker').change(function() {
+      var carMakerId = $(this).val();
+      if (carMakerId) {
+        $.ajax({
+          url: '/api/v1/cars/car-makers/' + carMakerId + '/',
+          type: 'GET',
+          success: function(data) {
+            console.log(data);
+            var carModelSelect = $('#car-model');
+            carModelSelect.empty();
+            carModelSelect.append('<option value="">Select Car Model</option>');
+            $.each(data.carmodel_set, function(index, carModel) {
+              carModelSelect.append('<option value="' + carModel.id + '">' + carModel.name + '</option>');
+            });
+            carModelSelect.prop('disabled', false);
+          },
+          error: function(xhr, textStatus, errorThrown) {
+            console.log(xhr.responseText);
+          }
+        });
+      } else {
+        $('#car-model').empty().prop('disabled', true);
+      }
+    });
+
+    $('#province').change(function() {
+      var provinceId = $(this).val();
+      if (provinceId) {
+        $.ajax({
+          url: '/api/v1/cars/provinces/' + provinceId + '/',
+          type: 'GET',
+          success: function(data) {
+            console.log(data);
+            var citySelect = $('#city');
+            citySelect.empty();
+            citySelect.append('<option value="">Select City</option>');
+            $.each(data.city_set, function(index, city) {
+              citySelect.append('<option value="' + city.id + '">' + city.name + '</option>');
+            });
+            citySelect.prop('disabled', false);
+          },
+          error: function(xhr, textStatus, errorThrown) {
+            console.log(xhr.responseText);
+          }
+        });
+      } else {
+        $('#city').empty().prop('disabled', true);
+      }
+    });
+
+    $('#city').change(function() {
+      var selectedCityId = $(this).val();
+      console.log(selectedCityId);
+      console.log("Changing city id");
+      $('#city-id').val(selectedCityId);
+    });
+
+    // Store the selected car model ID in the hidden input field
+    $('#car-model').change(function() {
+      var selectedCarModelId = $(this).val();
+        console.log(selectedCarModelId);
+        console.log("Changing car model id");
+      $('#car-model-id').val(selectedCarModelId);
+    });
+  });
+</script>
+
+
+<!-- AJAX script to submit the form without page reloading -->
+<script>
+  $(document).ready(function() {
+    $('#car-listing-form').submit(function(event) {
+      event.preventDefault();
+
+      // Serialize the form data
+      var formData = $(this).serialize();
+
+      // Send an AJAX POST request to the API endpoint
+      $.ajax({
+        url: '/api/v1/cars/predict-price/',
+        type: 'POST',
+        data: formData,
+
+         success: function(response) {
+            // Check if the response contains any errors
+            if (response.hasOwnProperty('error')) {
+              // Clear any existing success message
+              $('#success-message').empty();
+
+              // Get the error object from the response
+              var errorObject = response.error;
+
+              // Construct the error message
+              var errorMessage = '<ul>';
+              for (var field in errorObject) {
+                if (errorObject.hasOwnProperty(field)) {
+                  errorMessage += '<li>' + field + ': ' + errorObject[field][0] + '</li>';
+                }
+              }
+              errorMessage += '</ul>';
+
+              // Display the error message
+              $('#error-message').html(errorMessage);
+            } else {
+              // Handle the success response
+               $('#response-container').html(response.prediction);
+              // Clear any existing error message
+              $('#error-message').empty();
+
+              // Display the success message or update the page with the result
+              console.log(response);
+            }
+          },
+          error: function(xhr, textStatus, errorThrown) {
+            // Handle other types of errors
+
+            // Clear any existing success message
+            $('#success-message').empty();
+
+            // Display a general error message
+            $('#error-message').html('An error occurred while processing your request. Please try again later.');
+          }
+    });
+  });
+});
+</script>
+

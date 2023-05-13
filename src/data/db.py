@@ -18,5 +18,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=Engine)
 Base = declarative_base()
 
 
+class CustomBase(Base):
+    __abstract__ = True
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
 def _init_db():
     Base.metadata.create_all(bind=Engine)
